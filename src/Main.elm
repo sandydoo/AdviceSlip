@@ -5,6 +5,9 @@ import Html exposing (Html, text, button, pre)
 import Html.Events exposing (onClick)
 import Http
 import Json.Decode as D
+import Task
+import Time
+
 
 main =
   Browser.element
@@ -14,6 +17,7 @@ main =
     , view = view
     }
 
+
 type Model
   = Failure
   | Loading
@@ -21,8 +25,7 @@ type Model
 
 
 init : () -> (Model, Cmd Msg)
-init _ =
-  ( Loading, getAdvice )
+init _ = ( Loading, getAdvice )
 
 
 type Msg
@@ -30,17 +33,53 @@ type Msg
   | GotAdvice (Result Http.Error String)
 
 
+adviceDecoder : D.Decoder String
+adviceDecoder = D.field "slip" (D.field "advice" D.string)
+
+
 getAdvice : Cmd Msg
 getAdvice =
-  Http.request
-    { method = "GET"
-    , headers = []
-    , url = "https://api.adviceslip.com/advice"
-    , body = Http.emptyBody
-    , expect = Http.expectJson GotAdvice (D.field "slip" (D.field "advice" D.string))
-    , timeout = Nothing
-    , tracker = Nothing
-    }
+  let
+    resolver =
+      Http.stringResolver <|
+        \response ->
+          case response of
+            Http.BadUrl_ url ->
+              Err (Http.BadUrl url)
+
+            Http.Timeout_ ->
+              Err Http.Timeout
+
+            Http.NetworkError_ ->
+              Err Http.NetworkError
+
+            Http.BadStatus_ metadata body ->
+              Err (Http.BadStatus metadata.statusCode)
+
+            Http.GoodStatus_ metadata body ->
+              case D.decodeString adviceDecoder body of
+                Ok value ->
+                  Ok value
+
+                Err err ->
+                  Err (Http.BadBody (D.errorToString err))
+
+    getNewAdvice currentTime =
+        Http.task
+          { method = "GET"
+          , headers = []
+          , url = "https://api.adviceslip.com/advice?" ++ String.fromInt (Time.posixToMillis currentTime)
+          , body = Http.emptyBody
+          , resolver = resolver
+          , timeout = Nothing
+          }
+
+    makeRequest =
+      Time.now |>
+        Task.andThen getNewAdvice
+  in
+  Task.attempt GotAdvice makeRequest
+
 
 
 update : Msg -> Model -> (Model, Cmd Msg)
