@@ -71,7 +71,7 @@ getAdvice =
             Http.task
                 { method = "GET"
                 , headers = []
-                , url = "https://api.adviceslip.com/advice?" ++ String.fromInt (Time.posixToMillis currentTime)
+                , url = "https://api.adviceslip.com/advice?t=" ++ String.fromInt (Time.posixToMillis currentTime)
                 , body = Http.emptyBody
                 , resolver = resolver
                 , timeout = Nothing
