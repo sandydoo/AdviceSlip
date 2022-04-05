@@ -1,7 +1,8 @@
 module Main exposing (..)
 
 import Browser
-import Html exposing (Html, button, pre, text)
+import Html exposing (Html, button, div, text)
+import Html.Attributes as HA
 import Html.Events exposing (onClick)
 import Http
 import Json.Decode as D
@@ -107,7 +108,7 @@ view : Model -> Html Msg
 view model =
     case model of
         Failure ->
-            Html.div []
+            div []
                 [ text "I can’t seem to come up with any good advice at the moment..."
                 , button [ onClick GetAdvice ] [ text "Try again" ]
                 ]
@@ -116,7 +117,11 @@ view model =
             text "I’m thinking..."
 
         Success advice ->
-            pre []
+            div []
                 [ text advice
-                , button [ onClick GetAdvice ] [ text "Get more" ]
+                , button
+                    [ onClick GetAdvice
+                    , HA.style "display" "block"
+                    ]
+                    [ text "Get more" ]
                 ]
